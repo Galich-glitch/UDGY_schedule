@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редактор расписания — Drag & Drop</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --accent: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 16px; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  select, button, input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  button {
+    cursor: pointer;
+    background: var(--accent);
+    border: none;
+    font-weight: 500;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.secondary { background: #475569; }
+  button.danger { background: #dc2626; }
+
+  .timetable {
+    display: grid;
+    grid-template-columns: 90px repeat(6, 1fr);
+    gap: 6px;
+    overflow-x: auto;
+  }
+  .header, .time, .cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 70px;
+  }
+  .header {
+    text-align: center;
+    font-weight: 600;
+    background: #1e3a5f;
+  }
+  .time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .cell {
+    position: relative;
+    transition: background 0.15s;
+  }
+  .cell.drag-over {
+    background: #1e40af;
+    border-color: var(--accent);
+  }
+  .lesson {
+    background: #1e40af;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    cursor: grab;
+    line-height: 1.3;
+    user-select: none;
+  }
+  .lesson:active { cursor: grabbing; }
+  .lesson .type {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+  .lesson .room {
+    font-size: 11px;
+    color: #93c5fd;
+  }
+  .empty-hint {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding-top: 20px;
+  }
+  .toolbar {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #addForm {
+    display: none;
+    margin-top: 16px;
+    background: var(--card);
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  #addForm input, #addForm select {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Расписание — Drag & Drop редактор</h1>
+
+<div class="controls">
+  <label>Группа:
+    <select id="groupSelect"></select>
+  </label>
+  <button onclick="addLessonForm()">+ Добавить пару</button>
+  <button class="secondary" onclick="exportJSON()">Экспорт JSON</button>
+  <button class="secondary" onclick="clearGroup()">Очистить группу</button>
+</div>
+
+<div id="addForm">
+  <h3 style="margin-bottom:10px">Новая пара</h3>
+  <input id="newSubject" placeholder="Название дисциплины">
+  <input id="newTeacher" placeholder="Преподаватель">
+  <input id="newRoom" placeholder="Аудитория (напр. 208/6к)">
+  <select id="newType">
+    <option value="Лек">Лекция</option>
+    <option value="Прак">Практика</option>
+    <option value="Лаб">Лабораторная</option>
+  </select>
+  <select id="newDay"></select>
+  <select id="newTime"></select>
+  <button onclick="createLesson()">Создать</button>
+  <button class="secondary" onclick="document.getElementById('addForm').style.display='none'">Отмена</button>
+</div>
+
+<div class="timetable" id="timetable"></div>
+
+<script>
+const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const TIMES = ['8.20-9.40','9.50-11.10','11.50-13.10','13.20-14.40','15.00-16.20'];
+
+// Пример данных (можно расширить всеми группами из файла)
+const initialData = {
+  "ОБ-37.03.01.03-24": {
+    "Понедельник": {
+      "8.20-9.40": [{subject:"Иностранный язык", type:"Прак", teacher:"Железнова Ю.В.", room:"012/6к"}],
+      "9.50-11.10": [{subject:"Иностранный язык", type:"Прак", teacher:"Железнова Ю.В. / Требух О.С.", room:"012/6к, 210/4к"}],
+      "11.50-13.10": [{subject:"Иностранный язык", type:"Прак", teacher:"Требух О.С.", room:"210/4к"}]
+    },
+    "Вторник": {
+      "8.20-9.40": [{subject:"Социальная психология", type:"Лек", teacher:"Леонов И.Н.", room:"409/6к"}],
+      "9.50-11.10": [{subject:"Социальная психология", type:"Прак", teacher:"Леонов И.Н.", room:"012/6к"}],
+      "11.50-13.10": [{subject:"Социальная психология", type:"Лаб", teacher:"Леонов И.Н.", room:"012/6к"}],
+      "13.20-14.40": [{subject:"Психофизиология", type:"Прак", teacher:"Кожевников С.П.", room:"104/1к"}]
+    },
+    "Среда": {
+      "8.20-9.40": [{subject:"Психофизиология", type:"Лек", teacher:"Кожевников С.П.", room:"604/6к"}],
+      "9.50-11.10": [{subject:"Педагогическая психология", type:"Лек", teacher:"Чиркина Е.А.", room:"208/6к"}],
+      "11.50-13.10": [{subject:"Педагогическая психология", type:"Прак", teacher:"Чиркина Е.А.", room:"208/6к"}],
+      "13.20-14.40": [{subject:"Психофизиология", type:"Прак", teacher:"Кожевников С.П.", room:"104/1к"}]
+    },
+    "Четверг": {
+      "9.50-11.10": [{subject:"Физическая культура и спорт", type:"", teacher:"", room:""}]
+    },
+    "Пятница": {
+      "8.20-9.40": [{subject:"Общая психология", type:"Лек", teacher:"Сидоров К.Р.", room:"409/6к"}],
+      "9.50-11.10": [{subject:"Общий психологический практикум", type:"Прак", teacher:"Кожевникова О.В.", room:"417/6к"}],
+      "11.50-13.10": [{subject:"Общая психология", type:"Прак", teacher:"Сидоров К.Р.", room:"108а/6к"}],
+      "13.20-14.40": [{subject:"Общая психология", type:"Лаб", teacher:"Сидоров К.Р.", room:"108а/6к"}]
+    },
+    "Суббота": {
+      "13.20-14.40": [{subject:"Основы правоведения и антикоррупционного поведения", type:"ОК", teacher:"", room:"дист."}]
+    }
+  },
+  "ОС-37.05.01.01-27 (подгр.1)": {
+    "Понедельник": {
+      "8.20-9.40": [{subject:"Психологические концепты в немецком языке", type:"Прак", teacher:"Мерзлякова Н.П.", room:"101/6к"}],
+      "9.50-11.10": [{subject:"Клинико-психологический практикум", type:"Прак", teacher:"Гребенкин Д.Ю.", room:"403/4к"}],
+      "11.50-13.10": [{subject:"Иностранный язык", type:"Прак", teacher:"Железнова Ю.В.", room:"411/6к"}]
+    },
+    "Вторник": {
+      "8.20-9.40": [{subject:"Социальная психология", type:"Лек", teacher:"Леонов И.Н.", room:"409/6к"}],
+      "11.50-13.10": [{subject:"Психофизиология", type:"Прак", teacher:"Кожевников С.П.", room:"104/1к"}],
+      "13.20-14.40": [{subject:"Введение к работам З.Фрейда", type:"Прак", teacher:"Сироткин С.Ф.", room:"105/6к"}],
+      "15.00-16.20": [{subject:"Общая психология", type:"Лаб", teacher:"Сидоров К.Р.", room:"102/6к"}]
+    }
+    // ... можно добавить остальные дни
+  }
+};
+
+let data = JSON.parse(localStorage.getItem('scheduleData')) || structuredClone(initialData);
+let currentGroup = Object.keys(data)[0];
+let dragged = null;
+
+const groupSelect = document.getElementById('groupSelect');
+Object.keys(data).forEach(g => {
+  const opt = document.createElement('option');
+  opt.value = g; opt.textContent = g;
+  groupSelect.appendChild(opt);
+});
+groupSelect.value = currentGroup;
+groupSelect.onchange = () => {
+  currentGroup = groupSelect.value;
+  render();
+};
+
+function render() {
+  const table = document.getElementById('timetable');
+  table.innerHTML = '';
+
+  // Header
+  table.appendChild(createHeader(''));
+  DAYS.forEach(d => table.appendChild(createHeader(d)));
+
+  TIMES.forEach(time => {
+    table.appendChild(createTime(time));
+    DAYS.forEach(day => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.day = day;
+      cell.dataset.time = time;
+
+      cell.addEventListener('dragover', e => {
+        e.preventDefault();
+        cell.classList.add('drag-over');
+      });
+      cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+      cell.addEventListener('drop', e => {
+        e.preventDefault();
+        cell.classList.remove('drag-over');
+        if (!dragged) return;
+
+        // Удаляем из старого места
+        const oldDay = dragged.dataset.day;
+        const oldTime = dragged.dataset.time;
+        const lessons = data[currentGroup][oldDay]?.[oldTime] || [];
+        const idx = lessons.findIndex(l => l.id === dragged.dataset.id);
+        if (idx > -1) {
+          const [lesson] = lessons.splice(idx, 1);
+          if (!data[currentGroup][day]) data[currentGroup][day] = {};
+          if (!data[currentGroup][day][time]) data[currentGroup][day][time] = [];
+          data[currentGroup][day][time].push(lesson);
+          save();
+          render();
+        }
+      });
+
+      const lessons = data[currentGroup]?.[day]?.[time] || [];
+      if (lessons.length === 0) {
+        cell.innerHTML = '<div class="empty-hint">перетащите сюда</div>';
+      } else {
+        lessons.forEach(lesson => {
+          if (!lesson.id) lesson.id = crypto.randomUUID();
+          const el = document.createElement('div');
+          el.className = 'lesson';
+          el.draggable = true;
+          el.dataset.id = lesson.id;
+          el.dataset.day = day;
+          el.dataset.time = time;
+          el.innerHTML = `
+            <strong>${lesson.subject}</strong>
+            <div class="type">${lesson.type || ''} ${lesson.teacher || ''}</div>
+            <div class="room">${lesson.room || ''}</div>
+          `;
+          el.addEventListener('dragstart', () => {
+            dragged = el;
+            setTimeout(() => el.style.opacity = '0.4', 0);
+          });
+          el.addEventListener('dragend', () => {
+            el.style.opacity = '1';
+            dragged = null;
+          });
+          // Удаление по двойному клику
+          el.addEventListener('dblclick', () => {
+            if (confirm('Удалить эту пару?')) {
+              const arr = data[currentGroup][day][time];
+              const i = arr.findIndex(l => l.id === lesson.id);
+              if (i > -1) arr.splice(i, 1);
+              save();
+              render();
+            }
+          });
+          cell.appendChild(el);
+        });
+      }
+      table.appendChild(cell);
+    });
+  });
+}
+
+function createHeader(text) {
+  const div = document.createElement('div');
+  div.className = 'header';
+  div.textContent = text;
+  return div;
+}
+function createTime(text) {
+  const div = document.createElement('div');
+  div.className = 'time';
+  div.textContent = text;
+  return div;
+}
+
+function save() {
+  localStorage.setItem('scheduleData', JSON.stringify(data));
+}
+
+function addLessonForm() {
+  const form = document.getElementById('addForm');
+  form.style.display = 'block';
+  const daySel = document.getElementById('newDay');
+  const timeSel = document.getElementById('newTime');
+  daySel.innerHTML = DAYS.map(d => `<option>${d}</option>`).join('');
+  timeSel.innerHTML = TIMES.map(t => `<option>${t}</option>`).join('');
+}
+
+function createLesson() {
+  const subject = document.getElementById('newSubject').value.trim();
+  if (!subject) return alert('Введите название');
+  const day = document.getElementById('newDay').value;
+  const time = document.getElementById('newTime').value;
+  const lesson = {
+    id: crypto.randomUUID(),
+    subject,
+    teacher: document.getElementById('newTeacher').value.trim(),
+    room: document.getElementById('newRoom').value.trim(),
+    type: document.getElementById('newType').value
+  };
+  if (!data[currentGroup][day]) data[currentGroup][day] = {};
+  if (!data[currentGroup][day][time]) data[currentGroup][day][time] = [];
+  data[currentGroup][day][time].push(lesson);
+  save();
+  render();
+  document.getElementById('addForm').style.display = 'none';
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'schedule.json';
+  a.click();
+}
+
+function clearGroup() {
+  if (confirm('Очистить расписание текущей группы?')) {
+    data[currentGroup] = {};
+    save();
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
