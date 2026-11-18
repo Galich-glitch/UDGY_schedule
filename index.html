@@ -22,11 +22,9 @@
     color: var(--text);
     min-height: 100vh;
   }
-
-  .screen { display: none; min-height: 100vh; padding: 24px; }
+  .screen { display: none; min-height: 100vh; padding: 20px; }
   .screen.active { display: block; }
 
-  /* Экран 1 */
   #screen-upload {
     display: none;
     flex-direction: column;
@@ -41,29 +39,28 @@
     max-width: 520px;
     border: 2px dashed var(--border);
     border-radius: 16px;
-    padding: 48px 32px;
+    padding: 40px 28px;
     background: var(--card);
-    transition: all 0.2s;
+    transition: 0.2s;
     cursor: pointer;
   }
   .upload-area.dragover {
     border-color: var(--accent);
     background: #1e3a5f;
   }
-  .upload-area h2 { font-size: 1.4rem; margin-bottom: 12px; }
-  .upload-area p { color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
-  .upload-icon { font-size: 48px; margin-bottom: 16px; }
+  .upload-area h2 { font-size: 1.35rem; margin-bottom: 10px; }
+  .upload-area p { color: var(--muted); margin-bottom: 20px; line-height: 1.5; font-size: 15px; }
+  .upload-icon { font-size: 42px; margin-bottom: 12px; }
 
   .btn {
     background: var(--accent);
     color: white;
     border: none;
-    padding: 12px 28px;
+    padding: 11px 22px;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s;
   }
   .btn:hover { background: var(--accent-hover); }
   .btn-secondary { background: #475569; }
@@ -71,93 +68,96 @@
   .btn-danger { background: var(--danger); }
   .btn-danger:hover { background: #b91c1c; }
 
-  /* Экран 2 */
-  #screen-groups h1 { font-size: 1.5rem; margin-bottom: 8px; }
-  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .top-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  #screen-groups h1 { font-size: 1.4rem; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); margin-bottom: 20px; font-size: 14px; }
+
   .groups-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
-    max-width: 960px;
-    margin-bottom: 28px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
   }
   .group-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 18px;
+    padding: 16px;
     cursor: pointer;
-    transition: all 0.15s;
     position: relative;
+    transition: 0.15s;
   }
   .group-card:hover {
     border-color: var(--accent);
     transform: translateY(-2px);
   }
-  .group-card h3 { font-size: 1.05rem; margin-bottom: 4px; }
+  .group-card h3 { font-size: 1rem; margin-bottom: 4px; }
   .group-card p { color: var(--muted); font-size: 13px; }
-  .group-card .delete-group {
+  .delete-group {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
+    top: 8px; right: 8px;
+    background: none; border: none;
+    color: var(--muted); font-size: 18px;
+    cursor: pointer; padding: 2px 6px;
+  }
+  .delete-group:hover { color: var(--danger); }
+
+  .empty-state {
     color: var(--muted);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px 8px;
-  }
-  .group-card .delete-group:hover { color: var(--danger); }
-
-  .top-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
+    padding: 30px 10px;
+    text-align: center;
+    line-height: 1.6;
   }
 
-  /* Экран 3 */
   .controls {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     align-items: center;
   }
   select, input {
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 8px 12px;
+    padding: 8px 11px;
     border-radius: 8px;
     font-size: 14px;
   }
+
   .timetable {
     display: grid;
-    grid-template-columns: 90px repeat(6, 1fr);
-    gap: 6px;
+    grid-template-columns: 82px repeat(6, 1fr);
+    gap: 5px;
     overflow-x: auto;
+    padding-bottom: 20px;
   }
   .header, .time, .cell {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 8px;
-    min-height: 70px;
+    padding: 7px;
+    min-height: 64px;
   }
   .header {
     text-align: center;
     font-weight: 600;
     background: #1e3a5f;
+    font-size: 13px;
   }
   .time {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--muted);
   }
-  .cell { transition: background 0.15s; }
   .cell.drag-over {
     background: #1e40af;
     border-color: var(--accent);
@@ -165,66 +165,61 @@
   .lesson {
     background: #1e40af;
     border-radius: 6px;
-    padding: 6px 8px;
+    padding: 5px 7px;
     margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 11.5px;
     cursor: grab;
     line-height: 1.3;
-    user-select: none;
   }
   .lesson:active { cursor: grabbing; }
-  .lesson .type { font-size: 10px; opacity: 0.8; margin-top: 2px; }
-  .lesson .room { font-size: 11px; color: #93c5fd; }
+  .lesson .type { font-size: 10px; opacity: 0.85; margin-top: 2px; }
+  .lesson .room { font-size: 10.5px; color: #93c5fd; }
   .empty-hint {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     text-align: center;
-    padding-top: 20px;
+    padding-top: 18px;
   }
+
   #addForm, #addGroupForm {
     display: none;
-    margin: 16px 0;
+    margin: 14px 0;
     background: var(--card);
-    padding: 16px;
+    padding: 14px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    max-width: 400px;
+    max-width: 380px;
   }
   #addForm input, #addForm select,
-  #addGroupForm input {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-  .back-btn { margin-bottom: 16px; }
-  .file-name {
-    color: var(--muted);
-    font-size: 13px;
-    margin-top: 12px;
-  }
+  #addGroupForm input { width: 100%; margin-bottom: 8px; }
+
+  .file-name { color: var(--muted); font-size: 13px; margin-top: 12px; }
 </style>
 </head>
 <body>
 
-<!-- ========== ЭКРАН 1: Загрузка ========== -->
+<!-- Экран 1 -->
 <div id="screen-upload" class="screen active">
   <div class="upload-area" id="dropZone">
     <div class="upload-icon">📅</div>
     <h2>Перетащите или выберите таблицу расписания</h2>
-    <p>Файл никуда не отправляется.<br>Все данные хранятся только в кэше вашего браузера.</p>
+    <p>Файл никуда не отправляется.<br>Все данные хранятся только в кэше браузера.</p>
     <button class="btn" id="selectFileBtn">Выбрать файл</button>
-    <input type="file" id="fileInput" accept=".xls,.xlsx,.csv,.json" style="display:none">
+    <input type="file" id="fileInput" accept=".json,.xls,.xlsx,.csv" style="display:none">
     <div class="file-name" id="selectedFileName"></div>
   </div>
 </div>
 
-<!-- ========== ЭКРАН 2: Выбор / создание групп ========== -->
+<!-- Экран 2 -->
 <div id="screen-groups" class="screen">
   <div class="top-actions">
     <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('importJson').click()">Импорт JSON</button>
+    <input type="file" id="importJson" accept=".json" style="display:none">
   </div>
 
   <h1>Группы</h1>
-  <p class="subtitle">Выберите группу или создайте новую. Все изменения сохраняются в кэше браузера.</p>
+  <p class="subtitle">Создайте группу или импортируйте готовый JSON. Данные сохраняются только в кэше.</p>
 
   <div class="groups-grid" id="groupsGrid"></div>
 
@@ -232,22 +227,22 @@
 
   <div id="addGroupForm">
     <h3 style="margin-bottom:10px">Новая группа</h3>
-    <input id="newGroupCode" placeholder="Код группы (например ОБ-37.03.01.03-24)">
+    <input id="newGroupCode" placeholder="Код группы (ОБ-37.03.01.03-24)">
     <input id="newGroupName" placeholder="Название (необязательно)">
     <button class="btn" onclick="createGroup()">Создать</button>
     <button class="btn btn-secondary" onclick="document.getElementById('addGroupForm').style.display='none'">Отмена</button>
   </div>
 </div>
 
-<!-- ========== ЭКРАН 3: Расписание ========== -->
+<!-- Экран 3 -->
 <div id="screen-schedule" class="screen">
   <div class="top-actions">
-    <button class="btn btn-secondary back-btn" onclick="showScreen('groups')">← К группам</button>
+    <button class="btn btn-secondary" onclick="showScreen('groups')">← К группам</button>
     <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
   </div>
 
   <div class="controls">
-    <strong id="currentGroupTitle"></strong>
+    <strong id="currentGroupTitle" style="margin-right:8px"></strong>
     <button class="btn" onclick="addLessonForm()">+ Добавить пару</button>
     <button class="btn btn-secondary" onclick="exportJSON()">Экспорт JSON</button>
     <button class="btn btn-secondary" onclick="clearCurrentGroup()">Очистить группу</button>
@@ -278,111 +273,160 @@ const DAYS = ['Понедельник','Вторник','Среда','Четве
 const TIMES = ['8.20-9.40','9.50-11.10','11.50-13.10','13.20-14.40','15.00-16.20'];
 const STORAGE_KEY = 'scheduleData_secure_v1';
 
-let data = null;          // { groups: { "код": { name, schedule } } }
+let data = { groups: {} };
 let currentGroup = null;
 let dragged = null;
 
-// ===== Инициализация =====
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      data = JSON.parse(saved);
-      if (data && data.groups && Object.keys(data.groups).length > 0) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.groups) {
+        data = parsed;
         renderGroups();
         showScreen('groups');
         return;
       }
-    } catch (e) {}
+    } catch(e) {}
   }
-  // Нет данных → показываем экран загрузки
-  data = { groups: {} };
   showScreen('upload');
 }
 
-// ===== Навигация =====
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
 }
 
-// ===== Экран 1: Загрузка файла =====
+// === Загрузка файла ===
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-const selectedFileName = document.getElementById('selectedFileName');
 
-dropZone.addEventListener('click', (e) => {
+dropZone.addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') fileInput.click();
 });
-document.getElementById('selectFileBtn').addEventListener('click', (e) => {
+document.getElementById('selectFileBtn').onclick = e => {
   e.stopPropagation();
   fileInput.click();
-});
+};
 
-dropZone.addEventListener('dragover', (e) => {
+dropZone.addEventListener('dragover', e => {
   e.preventDefault();
   dropZone.classList.add('dragover');
 });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
+dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files.length) {
-    handleFile(e.dataTransfer.files[0]);
-  }
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
-fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) handleFile(fileInput.files[0]);
-});
+fileInput.onchange = () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+};
 
 function handleFile(file) {
-  selectedFileName.textContent = 'Выбран: ' + file.name;
-  // Файл никуда не отправляется и не парсится глубоко.
-  // Мы просто создаём пустую структуру и переходим дальше.
-  // Все данные пользователь заполняет сам — они хранятся только в localStorage.
-  data = { groups: {}, sourceFileName: file.name };
-  save();
-  setTimeout(() => {
-    renderGroups();
-    showScreen('groups');
-  }, 400);
+  document.getElementById('selectedFileName').textContent = 'Выбран: ' + file.name;
+
+  // Если это JSON — пробуем загрузить как данные
+  if (file.name.toLowerCase().endsWith('.json')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (parsed.groups) {
+          data = parsed;
+          save();
+          renderGroups();
+          showScreen('groups');
+          return;
+        }
+      } catch(err) {
+        alert('Не удалось прочитать JSON');
+      }
+      // если не получилось — просто создаём пустую структуру
+      data = { groups: {}, sourceFileName: file.name };
+      save();
+      renderGroups();
+      showScreen('groups');
+    };
+    reader.readAsText(file);
+  } else {
+    // Excel и другие файлы — просто переходим к пустым группам
+    data = { groups: {}, sourceFileName: file.name };
+    save();
+    setTimeout(() => {
+      renderGroups();
+      showScreen('groups');
+    }, 300);
+  }
 }
 
-// ===== Сброс всего =====
+// Импорт JSON с экрана групп
+document.getElementById('importJson').onchange = function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.groups) {
+        data = parsed;
+        save();
+        renderGroups();
+        alert('Данные успешно загружены');
+      } else {
+        alert('Неверный формат JSON');
+      }
+    } catch(err) {
+      alert('Ошибка чтения файла');
+    }
+  };
+  reader.readAsText(file);
+  this.value = '';
+};
+
 function resetAll() {
-  if (!confirm('Вы уверены? Все данные в кэше будут удалены.')) return;
+  if (!confirm('Удалить все данные из кэша?')) return;
   localStorage.removeItem(STORAGE_KEY);
   data = { groups: {} };
   currentGroup = null;
-  selectedFileName.textContent = '';
+  document.getElementById('selectedFileName').textContent = '';
   fileInput.value = '';
   showScreen('upload');
 }
 
-// ===== Экран 2: Группы =====
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// === Группы ===
 function renderGroups() {
   const grid = document.getElementById('groupsGrid');
-  grid.innerHTML = '';
-
   const codes = Object.keys(data.groups || {});
+
   if (codes.length === 0) {
-    grid.innerHTML = '<p style="color:var(--muted)">Пока нет ни одной группы. Создайте первую.</p>';
+    grid.innerHTML = `
+      <div class="empty-state">
+        Пока нет ни одной группы.<br>
+        Нажмите «+ Добавить группу» или импортируйте JSON.
+      </div>`;
     return;
   }
 
+  grid.innerHTML = '';
   codes.forEach(code => {
     const g = data.groups[code];
     const card = document.createElement('div');
     card.className = 'group-card';
     card.innerHTML = `
-      <button class="delete-group" title="Удалить группу">×</button>
+      <button class="delete-group" title="Удалить">×</button>
       <h3>${code}</h3>
       <p>${g.name || 'Без названия'}</p>
     `;
-    card.querySelector('.delete-group').onclick = (e) => {
+    card.querySelector('.delete-group').onclick = e => {
       e.stopPropagation();
-      if (confirm(`Удалить группу ${code}?`)) {
+      if (confirm('Удалить группу ' + code + '?')) {
         delete data.groups[code];
         save();
         renderGroups();
@@ -397,12 +441,13 @@ function showAddGroupForm() {
   document.getElementById('addGroupForm').style.display = 'block';
   document.getElementById('newGroupCode').value = '';
   document.getElementById('newGroupName').value = '';
+  document.getElementById('newGroupCode').focus();
 }
 
 function createGroup() {
   const code = document.getElementById('newGroupCode').value.trim();
   if (!code) return alert('Введите код группы');
-  if (data.groups[code]) return alert('Такая группа уже существует');
+  if (data.groups[code]) return alert('Такая группа уже есть');
 
   data.groups[code] = {
     name: document.getElementById('newGroupName').value.trim(),
@@ -421,16 +466,18 @@ function selectGroup(code) {
   showScreen('schedule');
 }
 
-// ===== Экран 3: Расписание =====
+// === Расписание ===
 function renderTimetable() {
   const table = document.getElementById('timetable');
   table.innerHTML = '';
 
+  // заголовки
   table.appendChild(createHeader(''));
   DAYS.forEach(d => table.appendChild(createHeader(d)));
 
   TIMES.forEach(time => {
     table.appendChild(createTime(time));
+
     DAYS.forEach(day => {
       const cell = document.createElement('div');
       cell.className = 'cell';
@@ -449,16 +496,16 @@ function renderTimetable() {
 
         const oldDay = dragged.dataset.day;
         const oldTime = dragged.dataset.time;
-        const lessons = data.groups[currentGroup].schedule[oldDay]?.[oldTime] || [];
-        const idx = lessons.findIndex(l => l.id === dragged.dataset.id);
-        if (idx > -1) {
-          const [lesson] = lessons.splice(idx, 1);
-          if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
-          if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
-          data.groups[currentGroup].schedule[day][time].push(lesson);
-          save();
-          renderTimetable();
-        }
+        const list = data.groups[currentGroup].schedule[oldDay]?.[oldTime] || [];
+        const idx = list.findIndex(l => l.id === dragged.dataset.id);
+        if (idx === -1) return;
+
+        const [lesson] = list.splice(idx, 1);
+        if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
+        if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
+        data.groups[currentGroup].schedule[day][time].push(lesson);
+        save();
+        renderTimetable();
       });
 
       const lessons = data.groups[currentGroup]?.schedule?.[day]?.[time] || [];
@@ -480,19 +527,21 @@ function renderTimetable() {
           `;
           el.addEventListener('dragstart', () => {
             dragged = el;
-            setTimeout(() => el.style.opacity = '0.4', 0);
+            el.style.opacity = '0.4';
           });
           el.addEventListener('dragend', () => {
             el.style.opacity = '1';
             dragged = null;
           });
           el.addEventListener('dblclick', () => {
-            if (confirm('Удалить эту пару?')) {
+            if (confirm('Удалить пару?')) {
               const arr = data.groups[currentGroup].schedule[day][time];
               const i = arr.findIndex(l => l.id === lesson.id);
-              if (i > -1) arr.splice(i, 1);
-              save();
-              renderTimetable();
+              if (i > -1) {
+                arr.splice(i, 1);
+                save();
+                renderTimetable();
+              }
             }
           });
           cell.appendChild(el);
@@ -516,19 +565,19 @@ function createTime(text) {
   return div;
 }
 
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 function addLessonForm() {
   document.getElementById('addForm').style.display = 'block';
   document.getElementById('newDay').innerHTML = DAYS.map(d => `<option>${d}</option>`).join('');
   document.getElementById('newTime').innerHTML = TIMES.map(t => `<option>${t}</option>`).join('');
+  document.getElementById('newSubject').value = '';
+  document.getElementById('newTeacher').value = '';
+  document.getElementById('newRoom').value = '';
 }
 
 function createLesson() {
   const subject = document.getElementById('newSubject').value.trim();
-  if (!subject) return alert('Введите название');
+  if (!subject) return alert('Введите название дисциплины');
+
   const day = document.getElementById('newDay').value;
   const time = document.getElementById('newTime').value;
 
@@ -540,8 +589,12 @@ function createLesson() {
     type: document.getElementById('newType').value
   };
 
-  if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
-  if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
+  if (!data.groups[currentGroup].schedule[day]) {
+    data.groups[currentGroup].schedule[day] = {};
+  }
+  if (!data.groups[currentGroup].schedule[day][time]) {
+    data.groups[currentGroup].schedule[day][time] = [];
+  }
   data.groups[currentGroup].schedule[day][time].push(lesson);
   save();
   renderTimetable();
@@ -563,7 +616,6 @@ function exportJSON() {
   a.click();
 }
 
-// Запуск
 init();
 </script>
 </body>
