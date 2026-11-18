@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редактор расписания</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .screen { display: none; min-height: 100vh; padding: 24px; }
+  .screen.active { display: block; }
+
+  /* Экран 1 */
+  #screen-upload {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #screen-upload.active { display: flex; }
+
+  .upload-area {
+    width: 100%;
+    max-width: 520px;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 48px 32px;
+    background: var(--card);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .upload-area.dragover {
+    border-color: var(--accent);
+    background: #1e3a5f;
+  }
+  .upload-area h2 { font-size: 1.4rem; margin-bottom: 12px; }
+  .upload-area p { color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .upload-icon { font-size: 48px; margin-bottom: 16px; }
+
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn-secondary { background: #475569; }
+  .btn-secondary:hover { background: #64748b; }
+  .btn-danger { background: var(--danger); }
+  .btn-danger:hover { background: #b91c1c; }
+
+  /* Экран 2 */
+  #screen-groups h1 { font-size: 1.5rem; margin-bottom: 8px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    max-width: 960px;
+    margin-bottom: 28px;
+  }
+  .group-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .group-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .group-card h3 { font-size: 1.05rem; margin-bottom: 4px; }
+  .group-card p { color: var(--muted); font-size: 13px; }
+  .group-card .delete-group {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .group-card .delete-group:hover { color: var(--danger); }
+
+  .top-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  /* Экран 3 */
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  select, input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .timetable {
+    display: grid;
+    grid-template-columns: 90px repeat(6, 1fr);
+    gap: 6px;
+    overflow-x: auto;
+  }
+  .header, .time, .cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 70px;
+  }
+  .header {
+    text-align: center;
+    font-weight: 600;
+    background: #1e3a5f;
+  }
+  .time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .cell { transition: background 0.15s; }
+  .cell.drag-over {
+    background: #1e40af;
+    border-color: var(--accent);
+  }
+  .lesson {
+    background: #1e40af;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    cursor: grab;
+    line-height: 1.3;
+    user-select: none;
+  }
+  .lesson:active { cursor: grabbing; }
+  .lesson .type { font-size: 10px; opacity: 0.8; margin-top: 2px; }
+  .lesson .room { font-size: 11px; color: #93c5fd; }
+  .empty-hint {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding-top: 20px;
+  }
+  #addForm, #addGroupForm {
+    display: none;
+    margin: 16px 0;
+    background: var(--card);
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    max-width: 400px;
+  }
+  #addForm input, #addForm select,
+  #addGroupForm input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .back-btn { margin-bottom: 16px; }
+  .file-name {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== ЭКРАН 1: Загрузка ========== -->
+<div id="screen-upload" class="screen active">
+  <div class="upload-area" id="dropZone">
+    <div class="upload-icon">📅</div>
+    <h2>Перетащите или выберите таблицу расписания</h2>
+    <p>Файл никуда не отправляется.<br>Все данные хранятся только в кэше вашего браузера.</p>
+    <button class="btn" id="selectFileBtn">Выбрать файл</button>
+    <input type="file" id="fileInput" accept=".xls,.xlsx,.csv,.json" style="display:none">
+    <div class="file-name" id="selectedFileName"></div>
+  </div>
+</div>
+
+<!-- ========== ЭКРАН 2: Выбор / создание групп ========== -->
+<div id="screen-groups" class="screen">
+  <div class="top-actions">
+    <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
+  </div>
+
+  <h1>Группы</h1>
+  <p class="subtitle">Выберите группу или создайте новую. Все изменения сохраняются в кэше браузера.</p>
+
+  <div class="groups-grid" id="groupsGrid"></div>
+
+  <button class="btn" onclick="showAddGroupForm()">+ Добавить группу</button>
+
+  <div id="addGroupForm">
+    <h3 style="margin-bottom:10px">Новая группа</h3>
+    <input id="newGroupCode" placeholder="Код группы (например ОБ-37.03.01.03-24)">
+    <input id="newGroupName" placeholder="Название (необязательно)">
+    <button class="btn" onclick="createGroup()">Создать</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('addGroupForm').style.display='none'">Отмена</button>
+  </div>
+</div>
+
+<!-- ========== ЭКРАН 3: Расписание ========== -->
+<div id="screen-schedule" class="screen">
+  <div class="top-actions">
+    <button class="btn btn-secondary back-btn" onclick="showScreen('groups')">← К группам</button>
+    <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
+  </div>
+
+  <div class="controls">
+    <strong id="currentGroupTitle"></strong>
+    <button class="btn" onclick="addLessonForm()">+ Добавить пару</button>
+    <button class="btn btn-secondary" onclick="exportJSON()">Экспорт JSON</button>
+    <button class="btn btn-secondary" onclick="clearCurrentGroup()">Очистить группу</button>
+  </div>
+
+  <div id="addForm">
+    <h3 style="margin-bottom:10px">Новая пара</h3>
+    <input id="newSubject" placeholder="Название дисциплины">
+    <input id="newTeacher" placeholder="Преподаватель">
+    <input id="newRoom" placeholder="Аудитория">
+    <select id="newType">
+      <option value="Лек">Лекция</option>
+      <option value="Прак">Практика</option>
+      <option value="Лаб">Лабораторная</option>
+      <option value="ОК">ОК</option>
+    </select>
+    <select id="newDay"></select>
+    <select id="newTime"></select>
+    <button class="btn" onclick="createLesson()">Создать</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('addForm').style.display='none'">Отмена</button>
+  </div>
+
+  <div class="timetable" id="timetable"></div>
+</div>
+
+<script>
+const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const TIMES = ['8.20-9.40','9.50-11.10','11.50-13.10','13.20-14.40','15.00-16.20'];
+const STORAGE_KEY = 'scheduleData_secure_v1';
+
+let data = null;          // { groups: { "код": { name, schedule } } }
+let currentGroup = null;
+let dragged = null;
+
+// ===== Инициализация =====
+function init() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      data = JSON.parse(saved);
+      if (data && data.groups && Object.keys(data.groups).length > 0) {
+        renderGroups();
+        showScreen('groups');
+        return;
+      }
+    } catch (e) {}
+  }
+  // Нет данных → показываем экран загрузки
+  data = { groups: {} };
+  showScreen('upload');
+}
+
+// ===== Навигация =====
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+// ===== Экран 1: Загрузка файла =====
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const selectedFileName = document.getElementById('selectedFileName');
+
+dropZone.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') fileInput.click();
+});
+document.getElementById('selectFileBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  fileInput.click();
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    handleFile(e.dataTransfer.files[0]);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  selectedFileName.textContent = 'Выбран: ' + file.name;
+  // Файл никуда не отправляется и не парсится глубоко.
+  // Мы просто создаём пустую структуру и переходим дальше.
+  // Все данные пользователь заполняет сам — они хранятся только в localStorage.
+  data = { groups: {}, sourceFileName: file.name };
+  save();
+  setTimeout(() => {
+    renderGroups();
+    showScreen('groups');
+  }, 400);
+}
+
+// ===== Сброс всего =====
+function resetAll() {
+  if (!confirm('Вы уверены? Все данные в кэше будут удалены.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = { groups: {} };
+  currentGroup = null;
+  selectedFileName.textContent = '';
+  fileInput.value = '';
+  showScreen('upload');
+}
+
+// ===== Экран 2: Группы =====
+function renderGroups() {
+  const grid = document.getElementById('groupsGrid');
+  grid.innerHTML = '';
+
+  const codes = Object.keys(data.groups || {});
+  if (codes.length === 0) {
+    grid.innerHTML = '<p style="color:var(--muted)">Пока нет ни одной группы. Создайте первую.</p>';
+    return;
+  }
+
+  codes.forEach(code => {
+    const g = data.groups[code];
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.innerHTML = `
+      <button class="delete-group" title="Удалить группу">×</button>
+      <h3>${code}</h3>
+      <p>${g.name || 'Без названия'}</p>
+    `;
+    card.querySelector('.delete-group').onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Удалить группу ${code}?`)) {
+        delete data.groups[code];
+        save();
+        renderGroups();
+      }
+    };
+    card.onclick = () => selectGroup(code);
+    grid.appendChild(card);
+  });
+}
+
+function showAddGroupForm() {
+  document.getElementById('addGroupForm').style.display = 'block';
+  document.getElementById('newGroupCode').value = '';
+  document.getElementById('newGroupName').value = '';
+}
+
+function createGroup() {
+  const code = document.getElementById('newGroupCode').value.trim();
+  if (!code) return alert('Введите код группы');
+  if (data.groups[code]) return alert('Такая группа уже существует');
+
+  data.groups[code] = {
+    name: document.getElementById('newGroupName').value.trim(),
+    schedule: {}
+  };
+  save();
+  document.getElementById('addGroupForm').style.display = 'none';
+  renderGroups();
+}
+
+function selectGroup(code) {
+  currentGroup = code;
+  document.getElementById('currentGroupTitle').textContent =
+    code + (data.groups[code].name ? ' — ' + data.groups[code].name : '');
+  renderTimetable();
+  showScreen('schedule');
+}
+
+// ===== Экран 3: Расписание =====
+function renderTimetable() {
+  const table = document.getElementById('timetable');
+  table.innerHTML = '';
+
+  table.appendChild(createHeader(''));
+  DAYS.forEach(d => table.appendChild(createHeader(d)));
+
+  TIMES.forEach(time => {
+    table.appendChild(createTime(time));
+    DAYS.forEach(day => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.day = day;
+      cell.dataset.time = time;
+
+      cell.addEventListener('dragover', e => {
+        e.preventDefault();
+        cell.classList.add('drag-over');
+      });
+      cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+      cell.addEventListener('drop', e => {
+        e.preventDefault();
+        cell.classList.remove('drag-over');
+        if (!dragged) return;
+
+        const oldDay = dragged.dataset.day;
+        const oldTime = dragged.dataset.time;
+        const lessons = data.groups[currentGroup].schedule[oldDay]?.[oldTime] || [];
+        const idx = lessons.findIndex(l => l.id === dragged.dataset.id);
+        if (idx > -1) {
+          const [lesson] = lessons.splice(idx, 1);
+          if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
+          if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
+          data.groups[currentGroup].schedule[day][time].push(lesson);
+          save();
+          renderTimetable();
+        }
+      });
+
+      const lessons = data.groups[currentGroup]?.schedule?.[day]?.[time] || [];
+      if (lessons.length === 0) {
+        cell.innerHTML = '<div class="empty-hint">перетащите сюда</div>';
+      } else {
+        lessons.forEach(lesson => {
+          if (!lesson.id) lesson.id = crypto.randomUUID();
+          const el = document.createElement('div');
+          el.className = 'lesson';
+          el.draggable = true;
+          el.dataset.id = lesson.id;
+          el.dataset.day = day;
+          el.dataset.time = time;
+          el.innerHTML = `
+            <strong>${lesson.subject}</strong>
+            <div class="type">${lesson.type || ''} ${lesson.teacher || ''}</div>
+            <div class="room">${lesson.room || ''}</div>
+          `;
+          el.addEventListener('dragstart', () => {
+            dragged = el;
+            setTimeout(() => el.style.opacity = '0.4', 0);
+          });
+          el.addEventListener('dragend', () => {
+            el.style.opacity = '1';
+            dragged = null;
+          });
+          el.addEventListener('dblclick', () => {
+            if (confirm('Удалить эту пару?')) {
+              const arr = data.groups[currentGroup].schedule[day][time];
+              const i = arr.findIndex(l => l.id === lesson.id);
+              if (i > -1) arr.splice(i, 1);
+              save();
+              renderTimetable();
+            }
+          });
+          cell.appendChild(el);
+        });
+      }
+      table.appendChild(cell);
+    });
+  });
+}
+
+function createHeader(text) {
+  const div = document.createElement('div');
+  div.className = 'header';
+  div.textContent = text;
+  return div;
+}
+function createTime(text) {
+  const div = document.createElement('div');
+  div.className = 'time';
+  div.textContent = text;
+  return div;
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function addLessonForm() {
+  document.getElementById('addForm').style.display = 'block';
+  document.getElementById('newDay').innerHTML = DAYS.map(d => `<option>${d}</option>`).join('');
+  document.getElementById('newTime').innerHTML = TIMES.map(t => `<option>${t}</option>`).join('');
+}
+
+function createLesson() {
+  const subject = document.getElementById('newSubject').value.trim();
+  if (!subject) return alert('Введите название');
+  const day = document.getElementById('newDay').value;
+  const time = document.getElementById('newTime').value;
+
+  const lesson = {
+    id: crypto.randomUUID(),
+    subject,
+    teacher: document.getElementById('newTeacher').value.trim(),
+    room: document.getElementById('newRoom').value.trim(),
+    type: document.getElementById('newType').value
+  };
+
+  if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
+  if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
+  data.groups[currentGroup].schedule[day][time].push(lesson);
+  save();
+  renderTimetable();
+  document.getElementById('addForm').style.display = 'none';
+}
+
+function clearCurrentGroup() {
+  if (!confirm('Очистить все пары этой группы?')) return;
+  data.groups[currentGroup].schedule = {};
+  save();
+  renderTimetable();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'schedule-backup.json';
+  a.click();
+}
+
+// Запуск
+init();
+</script>
+</body>
+</html>
