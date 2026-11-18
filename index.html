@@ -4,63 +4,41 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Редактор расписания</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --border: #334155;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --danger: #dc2626;
+    --bg: #0f172a; --card: #1e293b; --border: #334155;
+    --accent: #3b82f6; --accent-hover: #2563eb;
+    --text: #e2e8f0; --muted: #94a3b8; --danger: #dc2626;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
+    background: var(--bg); color: var(--text); min-height: 100vh;
   }
   .screen { display: none; min-height: 100vh; padding: 20px; }
   .screen.active { display: block; }
 
   #screen-upload {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
   }
   #screen-upload.active { display: flex; }
 
   .upload-area {
-    width: 100%;
-    max-width: 520px;
-    border: 2px dashed var(--border);
-    border-radius: 16px;
-    padding: 40px 28px;
-    background: var(--card);
-    transition: 0.2s;
-    cursor: pointer;
+    width: 100%; max-width: 520px; border: 2px dashed var(--border);
+    border-radius: 16px; padding: 40px 28px; background: var(--card);
+    transition: 0.2s; cursor: pointer;
   }
-  .upload-area.dragover {
-    border-color: var(--accent);
-    background: #1e3a5f;
-  }
+  .upload-area.dragover { border-color: var(--accent); background: #1e3a5f; }
   .upload-area h2 { font-size: 1.35rem; margin-bottom: 10px; }
-  .upload-area p { color: var(--muted); margin-bottom: 20px; line-height: 1.5; font-size: 15px; }
+  .upload-area p { color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
   .upload-icon { font-size: 42px; margin-bottom: 12px; }
 
   .btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 11px 22px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
+    background: var(--accent); color: white; border: none;
+    padding: 11px 22px; border-radius: 10px; font-size: 14px;
+    font-weight: 500; cursor: pointer;
   }
   .btn:hover { background: var(--accent-hover); }
   .btn-secondary { background: #475569; }
@@ -68,186 +46,100 @@
   .btn-danger { background: var(--danger); }
   .btn-danger:hover { background: #b91c1c; }
 
-  .top-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-  }
-
+  .top-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
   #screen-groups h1 { font-size: 1.4rem; margin-bottom: 6px; }
   .subtitle { color: var(--muted); margin-bottom: 20px; font-size: 14px; }
 
   .groups-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-    margin-bottom: 24px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px; margin-bottom: 24px;
   }
   .group-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    cursor: pointer;
-    position: relative;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px; cursor: pointer;
     transition: 0.15s;
   }
-  .group-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-  }
-  .group-card h3 { font-size: 1rem; margin-bottom: 4px; }
+  .group-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .group-card h3 { font-size: 1.05rem; margin-bottom: 6px; word-break: break-all; }
   .group-card p { color: var(--muted); font-size: 13px; }
-  .delete-group {
-    position: absolute;
-    top: 8px; right: 8px;
-    background: none; border: none;
-    color: var(--muted); font-size: 18px;
-    cursor: pointer; padding: 2px 6px;
-  }
-  .delete-group:hover { color: var(--danger); }
 
-  .empty-state {
-    color: var(--muted);
-    padding: 30px 10px;
-    text-align: center;
-    line-height: 1.6;
-  }
+  .empty-state { color: var(--muted); padding: 30px 10px; text-align: center; line-height: 1.6; }
 
   .controls {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-    align-items: center;
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center;
   }
   select, input {
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 11px;
-    border-radius: 8px;
-    font-size: 14px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 11px; border-radius: 8px; font-size: 14px;
   }
 
   .timetable {
-    display: grid;
-    grid-template-columns: 82px repeat(6, 1fr);
-    gap: 5px;
-    overflow-x: auto;
-    padding-bottom: 20px;
+    display: grid; grid-template-columns: 82px repeat(6, 1fr);
+    gap: 5px; overflow-x: auto; padding-bottom: 20px;
   }
   .header, .time, .cell {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px;
-    min-height: 64px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px; min-height: 64px;
   }
-  .header {
-    text-align: center;
-    font-weight: 600;
-    background: #1e3a5f;
-    font-size: 13px;
-  }
+  .header { text-align: center; font-weight: 600; background: #1e3a5f; font-size: 13px; }
   .time {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--muted);
   }
-  .cell.drag-over {
-    background: #1e40af;
-    border-color: var(--accent);
-  }
+  .cell.drag-over { background: #1e40af; border-color: var(--accent); }
   .lesson {
-    background: #1e40af;
-    border-radius: 6px;
-    padding: 5px 7px;
-    margin-bottom: 4px;
-    font-size: 11.5px;
-    cursor: grab;
-    line-height: 1.3;
+    background: #1e40af; border-radius: 6px; padding: 5px 7px;
+    margin-bottom: 4px; font-size: 11.5px; cursor: grab; line-height: 1.3;
   }
   .lesson:active { cursor: grabbing; }
   .lesson .type { font-size: 10px; opacity: 0.85; margin-top: 2px; }
   .lesson .room { font-size: 10.5px; color: #93c5fd; }
-  .empty-hint {
-    color: var(--muted);
-    font-size: 11px;
-    text-align: center;
-    padding-top: 18px;
-  }
+  .empty-hint { color: var(--muted); font-size: 11px; text-align: center; padding-top: 18px; }
 
-  #addForm, #addGroupForm {
-    display: none;
-    margin: 14px 0;
-    background: var(--card);
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    max-width: 380px;
+  #addForm {
+    display: none; margin: 14px 0; background: var(--card);
+    padding: 14px; border-radius: 10px; border: 1px solid var(--border); max-width: 380px;
   }
-  #addForm input, #addForm select,
-  #addGroupForm input { width: 100%; margin-bottom: 8px; }
+  #addForm input, #addForm select { width: 100%; margin-bottom: 8px; }
 
   .file-name { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .status { margin-top: 16px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
 
-<!-- Экран 1 -->
 <div id="screen-upload" class="screen active">
   <div class="upload-area" id="dropZone">
     <div class="upload-icon">📅</div>
     <h2>Перетащите или выберите таблицу расписания</h2>
-    <p>Файл никуда не отправляется.<br>Все данные хранятся только в кэше браузера.</p>
+    <p>Файл разбирается прямо в браузере.<br>Данные сохраняются только в кэше.</p>
     <button class="btn" id="selectFileBtn">Выбрать файл</button>
-    <input type="file" id="fileInput" accept=".json,.xls,.xlsx,.csv" style="display:none">
+    <input type="file" id="fileInput" accept=".xls,.xlsx" style="display:none">
     <div class="file-name" id="selectedFileName"></div>
+    <div class="status" id="parseStatus"></div>
   </div>
 </div>
 
-<!-- Экран 2 -->
 <div id="screen-groups" class="screen">
   <div class="top-actions">
     <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('importJson').click()">Импорт JSON</button>
-    <input type="file" id="importJson" accept=".json" style="display:none">
   </div>
-
-  <h1>Группы</h1>
-  <p class="subtitle">Создайте группу или импортируйте готовый JSON. Данные сохраняются только в кэше.</p>
-
+  <h1>Выберите группу</h1>
+  <p class="subtitle" id="groupsSubtitle">Найденные в файле группы</p>
   <div class="groups-grid" id="groupsGrid"></div>
-
-  <button class="btn" onclick="showAddGroupForm()">+ Добавить группу</button>
-
-  <div id="addGroupForm">
-    <h3 style="margin-bottom:10px">Новая группа</h3>
-    <input id="newGroupCode" placeholder="Код группы (ОБ-37.03.01.03-24)">
-    <input id="newGroupName" placeholder="Название (необязательно)">
-    <button class="btn" onclick="createGroup()">Создать</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('addGroupForm').style.display='none'">Отмена</button>
-  </div>
 </div>
 
-<!-- Экран 3 -->
 <div id="screen-schedule" class="screen">
   <div class="top-actions">
     <button class="btn btn-secondary" onclick="showScreen('groups')">← К группам</button>
     <button class="btn btn-danger" onclick="resetAll()">Внести новый файл</button>
   </div>
-
   <div class="controls">
     <strong id="currentGroupTitle" style="margin-right:8px"></strong>
     <button class="btn" onclick="addLessonForm()">+ Добавить пару</button>
     <button class="btn btn-secondary" onclick="exportJSON()">Экспорт JSON</button>
     <button class="btn btn-secondary" onclick="clearCurrentGroup()">Очистить группу</button>
   </div>
-
   <div id="addForm">
     <h3 style="margin-bottom:10px">Новая пара</h3>
     <input id="newSubject" placeholder="Название дисциплины">
@@ -264,14 +156,13 @@
     <button class="btn" onclick="createLesson()">Создать</button>
     <button class="btn btn-secondary" onclick="document.getElementById('addForm').style.display='none'">Отмена</button>
   </div>
-
   <div class="timetable" id="timetable"></div>
 </div>
 
 <script>
 const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const TIMES = ['8.20-9.40','9.50-11.10','11.50-13.10','13.20-14.40','15.00-16.20'];
-const STORAGE_KEY = 'scheduleData_secure_v1';
+const STORAGE_KEY = 'scheduleData_secure_v3';
 
 let data = { groups: {} };
 let currentGroup = null;
@@ -282,7 +173,7 @@ function init() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed && parsed.groups) {
+      if (parsed?.groups && Object.keys(parsed.groups).length) {
         data = parsed;
         renderGroups();
         showScreen('groups');
@@ -298,9 +189,25 @@ function showScreen(name) {
   document.getElementById('screen-' + name).classList.add('active');
 }
 
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function resetAll() {
+  if (!confirm('Удалить все данные из кэша и загрузить новый файл?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = { groups: {} };
+  currentGroup = null;
+  document.getElementById('selectedFileName').textContent = '';
+  document.getElementById('parseStatus').textContent = '';
+  document.getElementById('fileInput').value = '';
+  showScreen('upload');
+}
+
 // === Загрузка файла ===
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
+const parseStatus = document.getElementById('parseStatus');
 
 dropZone.addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') fileInput.click();
@@ -320,97 +227,192 @@ dropZone.addEventListener('drop', e => {
   dropZone.classList.remove('dragover');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
-
 fileInput.onchange = () => {
   if (fileInput.files[0]) handleFile(fileInput.files[0]);
 };
 
 function handleFile(file) {
-  document.getElementById('selectedFileName').textContent = 'Выбран: ' + file.name;
+  document.getElementById('selectedFileName').textContent = 'Файл: ' + file.name;
+  parseStatus.textContent = 'Анализирую файл...';
 
-  // Если это JSON — пробуем загрузить как данные
-  if (file.name.toLowerCase().endsWith('.json')) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const parsed = JSON.parse(e.target.result);
-        if (parsed.groups) {
-          data = parsed;
-          save();
-          renderGroups();
-          showScreen('groups');
-          return;
-        }
-      } catch(err) {
-        alert('Не удалось прочитать JSON');
-      }
-      // если не получилось — просто создаём пустую структуру
-      data = { groups: {}, sourceFileName: file.name };
-      save();
-      renderGroups();
-      showScreen('groups');
-    };
-    reader.readAsText(file);
-  } else {
-    // Excel и другие файлы — просто переходим к пустым группам
-    data = { groups: {}, sourceFileName: file.name };
-    save();
-    setTimeout(() => {
-      renderGroups();
-      showScreen('groups');
-    }, 300);
-  }
-}
-
-// Импорт JSON с экрана групп
-document.getElementById('importJson').onchange = function() {
-  const file = this.files[0];
-  if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = function(e) {
     try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.groups) {
-        data = parsed;
-        save();
-        renderGroups();
-        alert('Данные успешно загружены');
-      } else {
-        alert('Неверный формат JSON');
+      const workbook = XLSX.read(e.target.result, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      const parsed = parseSchedule(rows);
+
+      const count = Object.keys(parsed.groups).length;
+      if (count === 0) {
+        parseStatus.textContent = 'Не удалось найти группы. Проверьте, что это нужный файл расписания.';
+        return;
       }
-    } catch(err) {
-      alert('Ошибка чтения файла');
+
+      data = parsed;
+      save();
+      parseStatus.textContent = `Готово! Найдено групп: ${count}`;
+      setTimeout(() => {
+        renderGroups();
+        showScreen('groups');
+      }, 500);
+    } catch (err) {
+      console.error(err);
+      parseStatus.textContent = 'Ошибка чтения файла';
     }
   };
-  reader.readAsText(file);
-  this.value = '';
-};
-
-function resetAll() {
-  if (!confirm('Удалить все данные из кэша?')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  data = { groups: {} };
-  currentGroup = null;
-  document.getElementById('selectedFileName').textContent = '';
-  fileInput.value = '';
-  showScreen('upload');
+  reader.readAsArrayBuffer(file);
 }
 
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+// === Улучшенный парсер под ваш файл ===
+function parseSchedule(rows) {
+  const result = { groups: {} };
+  let groupColumns = []; // { col, code, name }
+
+  // 1. Ищем строку, где есть слово "Группа" или коды ОБ-/ОС-
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const row = rows[i].map(c => String(c || '').trim());
+
+    // Вариант А: строка содержит "Группа"
+    const groupLabelIdx = row.findIndex(c => c.toLowerCase() === 'группа');
+    if (groupLabelIdx !== -1) {
+      for (let c = groupLabelIdx + 1; c < row.length; c++) {
+        const val = row[c];
+        if (/^(ОБ|ОС)-[\d\.]+-\d+/i.test(val)) {
+          groupColumns.push({ col: c, code: val, name: '' });
+        }
+      }
+      if (groupColumns.length) break;
+    }
+
+    // Вариант Б: просто ищем все коды групп в строке
+    for (let c = 0; c < row.length; c++) {
+      const val = row[c];
+      if (/^(ОБ|ОС)-[\d\.]+-\d+/i.test(val)) {
+        // проверяем, нет ли уже такого
+        if (!groupColumns.some(g => g.code === val)) {
+          groupColumns.push({ col: c, code: val, name: '' });
+        }
+      }
+    }
+    if (groupColumns.length >= 3) break; // достаточно нашли
+  }
+
+  // 2. Пытаемся найти названия специальностей (строка выше)
+  if (groupColumns.length) {
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      const row = rows[i].map(c => String(c || '').trim());
+      if (row.some(c => c.includes('Специальность') || c.includes('Направление') || c.includes('Психология'))) {
+        groupColumns.forEach(g => {
+          // берём значение из того же столбца или чуть левее/правее
+          const candidates = [row[g.col], row[g.col-1], row[g.col+1], row[g.col-2]];
+          for (const cand of candidates) {
+            if (cand && cand.length > 5 && !/^(ОБ|ОС)-/i.test(cand) && !cand.includes('Группа')) {
+              g.name = cand;
+              break;
+            }
+          }
+        });
+        break;
+      }
+    }
+  }
+
+  // 3. Создаём группы
+  groupColumns.forEach(g => {
+    result.groups[g.code] = {
+      name: g.name || '',
+      schedule: {}
+    };
+  });
+
+  if (groupColumns.length === 0) return result;
+
+  // 4. Собираем занятия
+  let currentDay = null;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i].map(c => String(c || '').trim());
+    const col0 = row[0] || '';
+    const col1 = row[1] || '';
+
+    if (DAYS.includes(col0)) currentDay = col0;
+
+    let time = null;
+    if (TIMES.includes(col1)) time = col1;
+    else if (TIMES.includes(col0)) time = col0;
+
+    if (!currentDay || !time) continue;
+
+    groupColumns.forEach(g => {
+      // Пробуем несколько столбцов из-за объединённых ячеек
+      let text = '';
+      for (let offset of [0, 1, -1, 2]) {
+        const val = row[g.col + offset];
+        if (val && val.length > 5) {
+          text = val;
+          break;
+        }
+      }
+      if (!text || text === 'ПРАКТИКА') return;
+
+      const lesson = parseLessonText(text);
+      if (!lesson.subject || lesson.subject.length < 3) return;
+
+      if (!result.groups[g.code].schedule[currentDay]) {
+        result.groups[g.code].schedule[currentDay] = {};
+      }
+      if (!result.groups[g.code].schedule[currentDay][time]) {
+        result.groups[g.code].schedule[currentDay][time] = [];
+      }
+
+      const exists = result.groups[g.code].schedule[currentDay][time]
+        .some(l => l.subject === lesson.subject);
+      if (!exists) {
+        lesson.id = crypto.randomUUID();
+        result.groups[g.code].schedule[currentDay][time].push(lesson);
+      }
+    });
+  }
+
+  return result;
 }
 
-// === Группы ===
+function parseLessonText(text) {
+  const lesson = { subject: '', type: '', teacher: '', room: '' };
+
+  const typeMatch = text.match(/\((Лек|Прак|Лаб|ОК|ОКПрак|ОКЛек)\)/i);
+  if (typeMatch) lesson.type = typeMatch[1];
+
+  const roomMatch = text.match(/(\d{2,4}[а-я]?\/\d*[кк]?)/i);
+  if (roomMatch) lesson.room = roomMatch[1];
+
+  const teacherMatch = text.match(/([А-ЯЁ][а-яё]+ [А-ЯЁ]\.[А-ЯЁ]\.)/);
+  if (teacherMatch) lesson.teacher = teacherMatch[1];
+
+  let subject = text
+    .replace(/\([^)]+\)/g, '')
+    .replace(lesson.teacher || '', '')
+    .replace(lesson.room || '', '')
+    .replace(/,/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  lesson.subject = subject || text.substring(0, 50);
+  return lesson;
+}
+
+// === Группы (только выбор) ===
 function renderGroups() {
   const grid = document.getElementById('groupsGrid');
   const codes = Object.keys(data.groups || {});
 
+  document.getElementById('groupsSubtitle').textContent =
+    codes.length ? `Найдено групп: ${codes.length}. Выберите нужную:` : 'Группы не найдены';
+
   if (codes.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        Пока нет ни одной группы.<br>
-        Нажмите «+ Добавить группу» или импортируйте JSON.
-      </div>`;
+    grid.innerHTML = `<div class="empty-state">Не удалось автоматически найти группы в файле.<br>Попробуйте другой файл или нажмите «Внести новый файл».</div>`;
     return;
   }
 
@@ -420,42 +422,12 @@ function renderGroups() {
     const card = document.createElement('div');
     card.className = 'group-card';
     card.innerHTML = `
-      <button class="delete-group" title="Удалить">×</button>
       <h3>${code}</h3>
-      <p>${g.name || 'Без названия'}</p>
+      <p>${g.name || 'Нажмите, чтобы открыть расписание'}</p>
     `;
-    card.querySelector('.delete-group').onclick = e => {
-      e.stopPropagation();
-      if (confirm('Удалить группу ' + code + '?')) {
-        delete data.groups[code];
-        save();
-        renderGroups();
-      }
-    };
     card.onclick = () => selectGroup(code);
     grid.appendChild(card);
   });
-}
-
-function showAddGroupForm() {
-  document.getElementById('addGroupForm').style.display = 'block';
-  document.getElementById('newGroupCode').value = '';
-  document.getElementById('newGroupName').value = '';
-  document.getElementById('newGroupCode').focus();
-}
-
-function createGroup() {
-  const code = document.getElementById('newGroupCode').value.trim();
-  if (!code) return alert('Введите код группы');
-  if (data.groups[code]) return alert('Такая группа уже есть');
-
-  data.groups[code] = {
-    name: document.getElementById('newGroupName').value.trim(),
-    schedule: {}
-  };
-  save();
-  document.getElementById('addGroupForm').style.display = 'none';
-  renderGroups();
 }
 
 function selectGroup(code) {
@@ -470,36 +442,28 @@ function selectGroup(code) {
 function renderTimetable() {
   const table = document.getElementById('timetable');
   table.innerHTML = '';
-
-  // заголовки
   table.appendChild(createHeader(''));
   DAYS.forEach(d => table.appendChild(createHeader(d)));
 
   TIMES.forEach(time => {
     table.appendChild(createTime(time));
-
     DAYS.forEach(day => {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.day = day;
       cell.dataset.time = time;
 
-      cell.addEventListener('dragover', e => {
-        e.preventDefault();
-        cell.classList.add('drag-over');
-      });
+      cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
       cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
       cell.addEventListener('drop', e => {
         e.preventDefault();
         cell.classList.remove('drag-over');
         if (!dragged) return;
-
         const oldDay = dragged.dataset.day;
         const oldTime = dragged.dataset.time;
         const list = data.groups[currentGroup].schedule[oldDay]?.[oldTime] || [];
         const idx = list.findIndex(l => l.id === dragged.dataset.id);
         if (idx === -1) return;
-
         const [lesson] = list.splice(idx, 1);
         if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
         if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
@@ -525,23 +489,13 @@ function renderTimetable() {
             <div class="type">${lesson.type || ''} ${lesson.teacher || ''}</div>
             <div class="room">${lesson.room || ''}</div>
           `;
-          el.addEventListener('dragstart', () => {
-            dragged = el;
-            el.style.opacity = '0.4';
-          });
-          el.addEventListener('dragend', () => {
-            el.style.opacity = '1';
-            dragged = null;
-          });
+          el.addEventListener('dragstart', () => { dragged = el; el.style.opacity = '0.4'; });
+          el.addEventListener('dragend', () => { el.style.opacity = '1'; dragged = null; });
           el.addEventListener('dblclick', () => {
             if (confirm('Удалить пару?')) {
               const arr = data.groups[currentGroup].schedule[day][time];
               const i = arr.findIndex(l => l.id === lesson.id);
-              if (i > -1) {
-                arr.splice(i, 1);
-                save();
-                renderTimetable();
-              }
+              if (i > -1) { arr.splice(i, 1); save(); renderTimetable(); }
             }
           });
           cell.appendChild(el);
@@ -569,18 +523,13 @@ function addLessonForm() {
   document.getElementById('addForm').style.display = 'block';
   document.getElementById('newDay').innerHTML = DAYS.map(d => `<option>${d}</option>`).join('');
   document.getElementById('newTime').innerHTML = TIMES.map(t => `<option>${t}</option>`).join('');
-  document.getElementById('newSubject').value = '';
-  document.getElementById('newTeacher').value = '';
-  document.getElementById('newRoom').value = '';
 }
 
 function createLesson() {
   const subject = document.getElementById('newSubject').value.trim();
-  if (!subject) return alert('Введите название дисциплины');
-
+  if (!subject) return alert('Введите название');
   const day = document.getElementById('newDay').value;
   const time = document.getElementById('newTime').value;
-
   const lesson = {
     id: crypto.randomUUID(),
     subject,
@@ -588,13 +537,8 @@ function createLesson() {
     room: document.getElementById('newRoom').value.trim(),
     type: document.getElementById('newType').value
   };
-
-  if (!data.groups[currentGroup].schedule[day]) {
-    data.groups[currentGroup].schedule[day] = {};
-  }
-  if (!data.groups[currentGroup].schedule[day][time]) {
-    data.groups[currentGroup].schedule[day][time] = [];
-  }
+  if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
+  if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
   data.groups[currentGroup].schedule[day][time].push(lesson);
   save();
   renderTimetable();
