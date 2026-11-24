@@ -118,7 +118,7 @@
     <h2>Перетащите или выберите таблицу расписания</h2>
     <p>Файл разбирается прямо в браузере.<br>Данные сохраняются только в кэше.</p>
 
-    <label for="fileInput" class="btn" id="selectFileLabel">Выбрать файл</label>
+    <label for="fileInput" class="btn">Выбрать файл</label>
     <input type="file" id="fileInput" accept=".xls,.xlsx" style="display:none">
 
     <div class="file-name" id="selectedFileName"></div>
@@ -168,7 +168,7 @@
 <script>
 const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const TIMES = ['8.20-9.40','9.50-11.10','11.50-13.10','13.20-14.40','15.00-16.20'];
-const STORAGE_KEY = 'scheduleData_secure_v4';
+const STORAGE_KEY = 'scheduleData_secure_v5';
 
 let data = { groups: {} };
 let currentGroup = null;
@@ -215,13 +215,11 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const parseStatus = document.getElementById('parseStatus');
 
-// Клик по всей области, кроме label/input, тоже открывает диалог
 dropZone.addEventListener('click', function(e) {
   if (e.target.closest('label') || e.target === fileInput) return;
   fileInput.click();
 });
 
-// Drag & Drop
 dropZone.addEventListener('dragover', function(e) {
   e.preventDefault();
   dropZone.classList.add('dragover');
@@ -236,7 +234,6 @@ dropZone.addEventListener('drop', function(e) {
   if (file) handleFile(file);
 });
 
-// Изменение input
 fileInput.addEventListener('change', function() {
   const file = fileInput.files && fileInput.files[0];
   if (file) handleFile(file);
@@ -283,7 +280,7 @@ function handleFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// === Парсер с поддержкой подгрупп ===
+// === Парсер с поддержкой подгрупп и названий специальностей ===
 function parseSchedule(rows) {
   const result = { groups: {} };
 
@@ -291,65 +288,75 @@ function parseSchedule(rows) {
   let subgroupRowIdx = -1;
   let specialtyRowIdx = -1;
 
-  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+  // Ищем ключевые строки
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
     const row = rows[i].map(c => String(c || '').trim());
     const joined = row.join(' ').toLowerCase();
 
     if (joined.includes('специальность') || joined.includes('направление')) {
       specialtyRowIdx = i;
     }
-    if (joined.includes('группа') && !joined.includes('подгруппа')) {
+    if (row[1] && row[1].toLowerCase() === 'группа') {
       groupRowIdx = i;
     }
-    if (joined.includes('подгруппа')) {
+    if (row[1] && row[1].toLowerCase() === 'подгруппа') {
       subgroupRowIdx = i;
     }
   }
 
-  const mainGroups = [];
-
-  if (groupRowIdx !== -1) {
-    const groupRow = rows[groupRowIdx].map(c => String(c || '').trim());
-    const specialtyRow = specialtyRowIdx !== -1
-      ? rows[specialtyRowIdx].map(c => String(c || '').trim())
-      : [];
-
-    for (let c = 0; c < groupRow.length; c++) {
-      const val = groupRow[c];
-      if (/^(ОБ|ОС)-[\d\.]+-\d+/i.test(val)) {
-        let name = '';
-        for (let off of [0, -1, 1, -2, 2]) {
-          const cand = specialtyRow[c + off];
-          if (cand && cand.length > 4 && !/^(ОБ|ОС)-/i.test(cand) && !cand.toLowerCase().includes('группа')) {
-            name = cand;
-            break;
-          }
-        }
-        mainGroups.push({ code: val, name: name, startCol: c });
-      }
-    }
-  }
-
-  if (mainGroups.length === 0) {
-    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+  // Фолбэк для строки "Группа"
+  if (groupRowIdx === -1) {
+    for (let i = 0; i < Math.min(rows.length, 30); i++) {
       const row = rows[i].map(c => String(c || '').trim());
-      for (let c = 0; c < row.length; c++) {
-        if (/^(ОБ|ОС)-[\d\.]+-\d+/i.test(row[c])) {
-          if (!mainGroups.some(g => g.code === row[c])) {
-            mainGroups.push({ code: row[c], name: '', startCol: c });
-          }
-        }
+      if (row.some(c => c.toLowerCase() === 'группа')) {
+        groupRowIdx = i;
+        break;
       }
     }
   }
 
+  if (groupRowIdx === -1) return result;
+
+  const groupRow = rows[groupRowIdx].map(c => String(c || '').trim());
+  const specialtyRow = specialtyRowIdx !== -1
+    ? rows[specialtyRowIdx].map(c => String(c || '').trim())
+    : [];
+
+  // Собираем все непустые специальности в порядке следования
+  const specialties = [];
+  if (specialtyRowIdx !== -1) {
+    for (let c = 0; c < specialtyRow.length; c++) {
+      const val = specialtyRow[c];
+      if (val && val.length > 3
+          && !val.toLowerCase().includes('специальность')
+          && !val.toLowerCase().includes('направление')) {
+        specialties.push(val);
+      }
+    }
+  }
+
+  // Собираем группы с их колонками
+  const mainGroups = [];
+  for (let c = 0; c < groupRow.length; c++) {
+    const val = groupRow[c];
+    if (/^(ОБ|ОС)-[\d\.]+-\d+/i.test(val)) {
+      mainGroups.push({ code: val, startCol: c });
+    }
+  }
+
+  // Сопоставляем специальности группам по порядку
+  mainGroups.forEach((mg, idx) => {
+    mg.name = specialties[idx] || '';
+  });
+
+  // Определяем подгруппы
   const finalGroups = [];
 
   if (subgroupRowIdx !== -1 && mainGroups.length > 0) {
     const subRow = rows[subgroupRowIdx].map(c => String(c || '').trim());
 
     mainGroups.forEach((mg, idx) => {
-      const nextStart = idx < mainGroups.length - 1 ? mainGroups[idx + 1].startCol : 30;
+      const nextStart = idx < mainGroups.length - 1 ? mainGroups[idx + 1].startCol : groupRow.length;
       const possibleCols = [];
       for (let c = mg.startCol; c < nextStart; c++) possibleCols.push(c);
 
@@ -402,9 +409,10 @@ function parseSchedule(rows) {
     });
   }
 
+  // Создаём группы в результате
   finalGroups.forEach(g => {
     result.groups[g.key] = {
-      name: g.name + (g.subgroup ? ' (подгруппа ' + g.subgroup + ')' : ''),
+      name: g.name,
       code: g.code,
       subgroup: g.subgroup,
       schedule: {}
@@ -413,6 +421,7 @@ function parseSchedule(rows) {
 
   if (finalGroups.length === 0) return result;
 
+  // Парсим занятия
   let currentDay = null;
 
   for (let i = 0; i < rows.length; i++) {
@@ -435,18 +444,6 @@ function parseSchedule(rows) {
         if (val && val.length > 4 && val !== 'ПРАКТИКА') {
           text = val;
           break;
-        }
-      }
-      if (!text) {
-        for (const c of g.cols) {
-          for (let off of [1, -1, 2]) {
-            const val = row[c + off];
-            if (val && val.length > 4 && val !== 'ПРАКТИКА') {
-              text = val;
-              break;
-            }
-          }
-          if (text) break;
         }
       }
 
@@ -531,7 +528,9 @@ function renderGroups() {
 
 function selectGroup(key) {
   currentGroup = key;
-  document.getElementById('currentGroupTitle').textContent = key;
+  const g = data.groups[key];
+  document.getElementById('currentGroupTitle').textContent =
+    key + (g.name ? ' — ' + g.name : '');
   renderTimetable();
   showScreen('schedule');
 }
@@ -588,98 +587,4 @@ function renderTimetable() {
           el.addEventListener('dragstart', () => { dragged = el; el.style.opacity = '0.4'; });
           el.addEventListener('dragend', () => { el.style.opacity = '1'; dragged = null; });
           el.addEventListener('dblclick', () => {
-            if (confirm('Удалить пару?')) {
-              const arr = data.groups[currentGroup].schedule[day][time];
-              const i = arr.findIndex(l => l.id === lesson.id);
-              if (i > -1) {
-                arr.splice(i, 1);
-                if (arr.length === 0) delete data.groups[currentGroup].schedule[day][time];
-                save();
-                renderTimetable();
-              }
-            }
-          });
-          cell.appendChild(el);
-        });
-      }
-
-      table.appendChild(cell);
-    });
-  });
-}
-
-function createHeader(text) {
-  const el = document.createElement('div');
-  el.className = 'header';
-  el.textContent = text;
-  return el;
-}
-
-function createTime(text) {
-  const el = document.createElement('div');
-  el.className = 'time';
-  el.textContent = text;
-  return el;
-}
-
-function addLessonForm() {
-  const form = document.getElementById('addForm');
-  form.style.display = form.style.display === 'block' ? 'none' : 'block';
-
-  const daySel = document.getElementById('newDay');
-  const timeSel = document.getElementById('newTime');
-  if (!daySel.options.length) {
-    DAYS.forEach(d => daySel.add(new Option(d, d)));
-    TIMES.forEach(t => timeSel.add(new Option(t, t)));
-  }
-}
-
-function createLesson() {
-  const subject = document.getElementById('newSubject').value.trim();
-  if (!subject) { alert('Введите дисциплину'); return; }
-
-  const day = document.getElementById('newDay').value;
-  const time = document.getElementById('newTime').value;
-
-  const lesson = {
-    id: makeId(),
-    subject: subject,
-    teacher: document.getElementById('newTeacher').value.trim(),
-    room: document.getElementById('newRoom').value.trim(),
-    type: document.getElementById('newType').value
-  };
-
-  const g = data.groups[currentGroup];
-  if (!g.schedule[day]) g.schedule[day] = {};
-  if (!g.schedule[day][time]) g.schedule[day][time] = [];
-  g.schedule[day][time].push(lesson);
-
-  save();
-  document.getElementById('addForm').style.display = 'none';
-  document.getElementById('newSubject').value = '';
-  document.getElementById('newTeacher').value = '';
-  document.getElementById('newRoom').value = '';
-  renderTimetable();
-}
-
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(data.groups[currentGroup], null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = currentGroup.replace(/[\\/:*?"<>|]/g, '_') + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function clearCurrentGroup() {
-  if (!confirm('Очистить расписание группы?')) return;
-  data.groups[currentGroup].schedule = {};
-  save();
-  renderTimetable();
-}
-
-// Запуск приложения
-init();
-</script>
-</body>
-</html>
+           
