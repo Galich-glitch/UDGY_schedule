@@ -38,7 +38,8 @@
   .btn {
     background: var(--accent); color: white; border: none;
     padding: 11px 22px; border-radius: 10px; font-size: 14px;
-    font-weight: 500; cursor: pointer;
+    font-weight: 500; cursor: pointer; display: inline-block;
+    text-decoration: none; text-align: center;
   }
   .btn:hover { background: var(--accent-hover); }
   .btn-secondary { background: #475569; }
@@ -117,9 +118,9 @@
     <h2>Перетащите или выберите таблицу расписания</h2>
     <p>Файл разбирается прямо в браузере.<br>Данные сохраняются только в кэше.</p>
 
-    <button type="button" class="btn" id="selectFileBtn">Выбрать файл</button>
-
+    <label for="fileInput" class="btn" id="selectFileLabel">Выбрать файл</label>
     <input type="file" id="fileInput" accept=".xls,.xlsx" style="display:none">
+
     <div class="file-name" id="selectedFileName"></div>
     <div class="status" id="parseStatus"></div>
   </div>
@@ -178,7 +179,7 @@ function init() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed?.groups && Object.keys(parsed.groups).length) {
+      if (parsed && parsed.groups && Object.keys(parsed.groups).length) {
         data = parsed;
         renderGroups();
         showScreen('groups');
@@ -209,23 +210,18 @@ function resetAll() {
   showScreen('upload');
 }
 
-// === Надёжная обработка выбора файла ===
+// === Обработка выбора файла ===
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-const selectFileBtn = document.getElementById('selectFileBtn');
 const parseStatus = document.getElementById('parseStatus');
 
-selectFileBtn.addEventListener('click', function(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  fileInput.click();
-});
-
+// Клик по всей области, кроме label/input, тоже открывает диалог
 dropZone.addEventListener('click', function(e) {
-  if (e.target.closest('button') || e.target === fileInput) return;
+  if (e.target.closest('label') || e.target === fileInput) return;
   fileInput.click();
 });
 
+// Drag & Drop
 dropZone.addEventListener('dragover', function(e) {
   e.preventDefault();
   dropZone.classList.add('dragover');
@@ -236,12 +232,13 @@ dropZone.addEventListener('dragleave', function() {
 dropZone.addEventListener('drop', function(e) {
   e.preventDefault();
   dropZone.classList.remove('dragover');
-  const file = e.dataTransfer?.files?.[0];
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   if (file) handleFile(file);
 });
 
+// Изменение input
 fileInput.addEventListener('change', function() {
-  const file = fileInput.files?.[0];
+  const file = fileInput.files && fileInput.files[0];
   if (file) handleFile(file);
 });
 
@@ -270,8 +267,8 @@ function handleFile(file) {
 
       data = parsed;
       save();
-      parseStatus.textContent = `Готово! Найдено: ${count} групп/подгрупп`;
-      setTimeout(() => {
+      parseStatus.textContent = 'Готово! Найдено: ' + count + ' групп/подгрупп';
+      setTimeout(function() {
         renderGroups();
         showScreen('groups');
       }, 500);
@@ -328,7 +325,7 @@ function parseSchedule(rows) {
             break;
           }
         }
-        mainGroups.push({ code: val, name, startCol: c });
+        mainGroups.push({ code: val, name: name, startCol: c });
       }
     }
   }
@@ -407,7 +404,7 @@ function parseSchedule(rows) {
 
   finalGroups.forEach(g => {
     result.groups[g.key] = {
-      name: g.name + (g.subgroup ? ` (подгруппа ${g.subgroup})` : ''),
+      name: g.name + (g.subgroup ? ' (подгруппа ' + g.subgroup + ')' : ''),
       code: g.code,
       subgroup: g.subgroup,
       schedule: {}
@@ -468,13 +465,18 @@ function parseSchedule(rows) {
       const exists = result.groups[g.key].schedule[currentDay][time]
         .some(l => l.subject === lesson.subject && l.teacher === lesson.teacher);
       if (!exists) {
-        lesson.id = crypto.randomUUID();
+        lesson.id = makeId();
         result.groups[g.key].schedule[currentDay][time].push(lesson);
       }
     });
   }
 
   return result;
+}
+
+function makeId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 }
 
 function parseLessonText(text) {
@@ -506,10 +508,10 @@ function renderGroups() {
   const codes = Object.keys(data.groups || {});
 
   document.getElementById('groupsSubtitle').textContent =
-    codes.length ? `Найдено: ${codes.length}. Выберите группу или подгруппу:` : 'Группы не найдены';
+    codes.length ? 'Найдено: ' + codes.length + '. Выберите группу или подгруппу:' : 'Группы не найдены';
 
   if (codes.length === 0) {
-    grid.innerHTML = `<div class="empty-state">Не удалось найти группы.<br>Попробуйте другой файл.</div>`;
+    grid.innerHTML = '<div class="empty-state">Не удалось найти группы.<br>Попробуйте другой файл.</div>';
     return;
   }
 
@@ -518,11 +520,10 @@ function renderGroups() {
     const g = data.groups[key];
     const card = document.createElement('div');
     card.className = 'group-card';
-    card.innerHTML = `
-      <h3>${key}</h3>
-      <p>${g.name || ''}</p>
-      ${g.subgroup ? `<span class="badge">Подгруппа ${g.subgroup}</span>` : ''}
-    `;
+    card.innerHTML =
+      '<h3>' + key + '</h3>' +
+      '<p>' + (g.name || '') + '</p>' +
+      (g.subgroup ? '<span class="badge">Подгруппа ' + g.subgroup + '</span>' : '');
     card.onclick = () => selectGroup(key);
     grid.appendChild(card);
   });
@@ -557,10 +558,10 @@ function renderTimetable() {
         if (!dragged) return;
         const oldDay = dragged.dataset.day;
         const oldTime = dragged.dataset.time;
-        const list = data.groups[currentGroup].schedule[oldDay]?.[oldTime] || [];
+        const list = data.groups[currentGroup].schedule[oldDay] && data.groups[currentGroup].schedule[oldDay][oldTime] || [];
         const idx = list.findIndex(l => l.id === dragged.dataset.id);
         if (idx === -1) return;
-        const [lesson] = list.splice(idx, 1);
+        const lesson = list.splice(idx, 1)[0];
         if (!data.groups[currentGroup].schedule[day]) data.groups[currentGroup].schedule[day] = {};
         if (!data.groups[currentGroup].schedule[day][time]) data.groups[currentGroup].schedule[day][time] = [];
         data.groups[currentGroup].schedule[day][time].push(lesson);
@@ -568,23 +569,22 @@ function renderTimetable() {
         renderTimetable();
       });
 
-      const lessons = data.groups[currentGroup]?.schedule?.[day]?.[time] || [];
+      const lessons = data.groups[currentGroup] && data.groups[currentGroup].schedule[day] && data.groups[currentGroup].schedule[day][time] || [];
       if (lessons.length === 0) {
         cell.innerHTML = '<div class="empty-hint">перетащите сюда</div>';
       } else {
         lessons.forEach(lesson => {
-          if (!lesson.id) lesson.id = crypto.randomUUID();
+          if (!lesson.id) lesson.id = makeId();
           const el = document.createElement('div');
           el.className = 'lesson';
           el.draggable = true;
           el.dataset.id = lesson.id;
           el.dataset.day = day;
           el.dataset.time = time;
-          el.innerHTML = `
-            <strong>${lesson.subject}</strong>
-            <div class="type">${lesson.type || ''} ${lesson.teacher || ''}</div>
-            <div class="room">${lesson.room || ''}</div>
-          `;
+          el.innerHTML =
+            '<strong>' + lesson.subject + '</strong>' +
+            '<div class="type">' + (lesson.type || '') + ' ' + (lesson.teacher || '') + '</div>' +
+            '<div class="room">' + (lesson.room || '') + '</div>';
           el.addEventListener('dragstart', () => { dragged = el; el.style.opacity = '0.4'; });
           el.addEventListener('dragend', () => { el.style.opacity = '1'; dragged = null; });
           el.addEventListener('dblclick', () => {
@@ -592,4 +592,94 @@ function renderTimetable() {
               const arr = data.groups[currentGroup].schedule[day][time];
               const i = arr.findIndex(l => l.id === lesson.id);
               if (i > -1) {
-                arr.splice
+                arr.splice(i, 1);
+                if (arr.length === 0) delete data.groups[currentGroup].schedule[day][time];
+                save();
+                renderTimetable();
+              }
+            }
+          });
+          cell.appendChild(el);
+        });
+      }
+
+      table.appendChild(cell);
+    });
+  });
+}
+
+function createHeader(text) {
+  const el = document.createElement('div');
+  el.className = 'header';
+  el.textContent = text;
+  return el;
+}
+
+function createTime(text) {
+  const el = document.createElement('div');
+  el.className = 'time';
+  el.textContent = text;
+  return el;
+}
+
+function addLessonForm() {
+  const form = document.getElementById('addForm');
+  form.style.display = form.style.display === 'block' ? 'none' : 'block';
+
+  const daySel = document.getElementById('newDay');
+  const timeSel = document.getElementById('newTime');
+  if (!daySel.options.length) {
+    DAYS.forEach(d => daySel.add(new Option(d, d)));
+    TIMES.forEach(t => timeSel.add(new Option(t, t)));
+  }
+}
+
+function createLesson() {
+  const subject = document.getElementById('newSubject').value.trim();
+  if (!subject) { alert('Введите дисциплину'); return; }
+
+  const day = document.getElementById('newDay').value;
+  const time = document.getElementById('newTime').value;
+
+  const lesson = {
+    id: makeId(),
+    subject: subject,
+    teacher: document.getElementById('newTeacher').value.trim(),
+    room: document.getElementById('newRoom').value.trim(),
+    type: document.getElementById('newType').value
+  };
+
+  const g = data.groups[currentGroup];
+  if (!g.schedule[day]) g.schedule[day] = {};
+  if (!g.schedule[day][time]) g.schedule[day][time] = [];
+  g.schedule[day][time].push(lesson);
+
+  save();
+  document.getElementById('addForm').style.display = 'none';
+  document.getElementById('newSubject').value = '';
+  document.getElementById('newTeacher').value = '';
+  document.getElementById('newRoom').value = '';
+  renderTimetable();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(data.groups[currentGroup], null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentGroup.replace(/[\\/:*?"<>|]/g, '_') + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function clearCurrentGroup() {
+  if (!confirm('Очистить расписание группы?')) return;
+  data.groups[currentGroup].schedule = {};
+  save();
+  renderTimetable();
+}
+
+// Запуск приложения
+init();
+</script>
+</body>
+</html>
